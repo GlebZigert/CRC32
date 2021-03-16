@@ -397,6 +397,9 @@ void MainWindow::process()
 
     case 2:
     qDebug()<<"step 2";
+//Завернуть первый блок в обертку
+//Отправить
+//Начать ждать квитанцию
     break;
 
     case 3:
