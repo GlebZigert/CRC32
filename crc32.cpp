@@ -1,6 +1,6 @@
 #include "crc32.h"
 
-static quint32 calcCRC32(QByteArray data)
+quint32 Crc32::calcCRC32(QByteArray data)
 {
     static const quint32 crc32Table[] =
     {
@@ -59,7 +59,7 @@ static quint32 calcCRC32(QByteArray data)
 
 }
 
-static QString calcFileCRC(QString fileName)
+QString Crc32::calcFileCRC(QString fileName)
 {
     QString strCRC = "";
     quint32 crc = 0;;

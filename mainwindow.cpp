@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     ar.append(0x01);
     ar.append(0x02);
 
-    quint32 crc32 = calcCRC32(ar);
+    quint32 crc32 = Crc32::calcCRC32(ar);
 // //   quint32 crc32 =Crc32::calcCRC32(ar);
     qDebug()<<crc32;
 
