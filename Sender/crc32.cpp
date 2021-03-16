@@ -1,39 +1,6 @@
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
-#include <QDebug>
-#include <crc32.h>
+#include "crc32.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
-    ui->setupUi(this);
-
-
-    QByteArray ar;
-    ar.append(0xB5);
-    ar.append(0x01);
-    ar.append(0x02);
-
-    quint32 crc32 = Crc32::calcCRC32(ar);
-// //   quint32 crc32 =Crc32::calcCRC32(ar);
-    qDebug()<<crc32;
-
-}
-
-MainWindow::~MainWindow()
-{
-    delete ui;
-
-}
-
-
-
-
-
-
-
-quint32 MainWindow::calcCRC32(QByteArray data)
+quint32 Crc32::calcCRC32(QByteArray data)
 {
     static const quint32 crc32Table[] =
     {
@@ -89,10 +56,10 @@ quint32 MainWindow::calcCRC32(QByteArray data)
     }
 
     return (crc32 ^ 0xffffffffL);
+
 }
 
-// Get the crc32 code of the file
-QString MainWindow::calcFileCRC(QString fileName)
+QString Crc32::calcFileCRC(QString fileName)
 {
     QString strCRC = "";
     quint32 crc = 0;;
@@ -109,4 +76,10 @@ QString MainWindow::calcFileCRC(QString fileName)
     }
 
     return strCRC;
+}
+
+
+Crc32::Crc32()
+{
+
 }
