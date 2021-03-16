@@ -19,6 +19,9 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    int getKvit();
+    void setKvit();
+
 private slots:
 
     void on_OpenPort_clicked();
@@ -39,7 +42,7 @@ public slots:
 
 private:
 
-    void process(int step);
+    void process();
     int count_1;
 
     void cmd_start();
@@ -50,8 +53,15 @@ private:
     QString calcFileCRC(QString fileName);
     quint32 calcCRC32(QByteArray data);
 
-    void get_kvit();
-    void get_kvit_with_block_number();
+    int kvit;
+
+    int step;
+
+
+    void get_kvit_msg();
+    void get_kvit_msg_with_block_number();
+
+
 
 signals:
     void data_from_port(QByteArray data);

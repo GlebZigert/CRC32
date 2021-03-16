@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     quit=0;
+    step=0;
     ui->setupUi(this);
 
     const auto infos = QSerialPortInfo::availablePorts();
@@ -114,12 +115,33 @@ quint32 MainWindow::calcCRC32(QByteArray data)
     return (crc32 ^ 0xffffffffL);
 }
 
-void MainWindow::get_kvit()
+int MainWindow::getKvit()
 {
- qDebug()<<"get_kvit" ;
+    int val=kvit;
+    kvit=0;
+    return val;
 }
 
-void MainWindow::get_kvit_with_block_number()
+void MainWindow::setKvit()
+{
+    kvit = 1;
+}
+
+void MainWindow::get_kvit_msg()
+{
+    qDebug()<<"get_kvit" ;
+    switch(step)
+    {
+    case 1:
+        step=2;
+        process();
+    break;
+
+    }
+
+}
+
+void MainWindow::get_kvit_msg_with_block_number()
 {
  qDebug()<<"get_kvit_with_block_number" ;
 }
@@ -186,23 +208,28 @@ void MainWindow::on_PortName_currentIndexChanged(const QString &arg1)
 void MainWindow::on_pushButton_clicked()
 {
     qDebug()<<"--Обновление прошивки-----";
-    process(0);
-    process(1);
+
+    step=0;
+    process();
+    step=1;
+    process();
+
 }
 
 void MainWindow::tmr_1_timeout()//не дождался квитанцию
 {
   tmr_1.stop();
   count_1++;
-  if(count_1<10)//Счетчик_1 не больше 10?
+  if(count_1<100)//Счетчик_1 не больше 10?
   {
-    process(1);//Повторить этот шаг.
+    process();//Повторить этот шаг.
 
   }
   else//Счетчик_1 больше 10?
   {
       //Вывести Нет Связи
-  process(0);//Все параметры на исходную. Счетчик_1 равен нулю.
+  step=0;
+  process();//Все параметры на исходную. Счетчик_1 равен нулю.
   }
 
 
@@ -308,13 +335,13 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                         qDebug()<<size;
                         if(size==5)
                         {
-                        get_kvit();
+                        get_kvit_msg();
                         }
                         else if(size==7)
                         {
                         int bl_nbr=(quint8)res.at(4)*256+(quint8)res.at(5);
                         qDebug()<<"номер блока "<<bl_nbr;
-                        get_kvit();
+                        get_kvit_msg_with_block_number();
                         }
 
                     }
@@ -339,7 +366,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
     }
 }
 
-void MainWindow::process(int step)
+void MainWindow::process()
 {
     switch(step)
     {
@@ -369,7 +396,7 @@ void MainWindow::process(int step)
     break;
 
     case 2:
-
+    qDebug()<<"step 2";
     break;
 
     case 3:
