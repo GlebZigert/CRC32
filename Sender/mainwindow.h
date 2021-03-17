@@ -71,9 +71,13 @@ private:
 
     int step;
 
+    int blk_nbr;
+
+    QByteArray wrap_block(QByteArray block, int number);
+
 
     void get_kvit_msg();
-    void get_kvit_msg_with_block_number();
+    void get_kvit_msg_with_block_number(int blk_nbr);
 
     void send_block_number(int nbr);
 

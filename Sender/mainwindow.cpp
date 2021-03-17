@@ -11,9 +11,59 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
-    QByteArray ba = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
+    qDebug()<<"blk_nbr "<<blk_nbr;
+ QByteArray origin = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
+ QByteArray ba = QByteArray::fromHex(QVariant("b563224107080102030405060708091011121314151617181920212223242526272829303132").toByteArray());
 
-    qDebug()<<"ba "<<ba.toHex();
+ QByteArray raw=QByteArray::fromHex(QVariant("0102030405060708091011121314151617181920212223242526272829303132").toByteArray());
+
+ int nmbr=1800;
+ QByteArray number;
+ number.clear();
+ number.append((quint8)(nmbr/0x100));
+ number.append((quint8)(nmbr%0x100));
+
+ qDebug()<<"номер "<<number.toHex();
+ quint8 size=number.size()+raw.size();
+ qDebug()<<"размер "<<size;
+ quint8 cmd=0x41;
+
+ QByteArray res;
+ res.clear();
+ res.append(0xB5);
+ res.append(0x63);
+ res.append(size);
+ res.append(cmd);
+ res.append(number);
+ res.append(raw);
+
+ quint32 crc32 = Crc32::calcCRC32(ba);
+
+
+
+
+
+ qDebug()<<"crc32 raw"<<crc32;
+ crc32 = Crc32::calcCRC32(res);
+ qDebug()<<"crc32 res"<<crc32;
+
+ QByteArray crc32_ba;
+ crc32_ba.clear();
+ crc32_ba.append((quint8)(crc32/0x1000000));
+ crc32_ba.append((quint8)(crc32/0x10000));
+ crc32_ba.append((quint8)(crc32/0x100));
+ crc32_ba.append((quint8)(crc32%0x100));
+ res.append(crc32_ba);
+
+ QByteArray final=this->wrap_block(raw,nmbr);
+
+ qDebug()<<origin.toHex();
+ qDebug()<<res.toHex();
+ qDebug()<<final.toHex();
+
+
+ qDebug()<<"crc32_ba "<<crc32_ba.toHex();
+
 
 //Обнуление настроек
     quit=0;
@@ -30,7 +80,7 @@ MainWindow::MainWindow(QWidget *parent)
     ar.append(0xB5);
     ar.append(0x01);
     ar.append(0x02);
-    quint32 crc32 = Crc32::calcCRC32(ar);
+    crc32 = Crc32::calcCRC32(ar);
     qDebug()<<crc32;
 
 //Здесь закачай файл в буффер
@@ -139,6 +189,54 @@ quint32 MainWindow::calcCRC32(QByteArray data)
     return (crc32 ^ 0xffffffffL);
 }
 
+QByteArray MainWindow::wrap_block(QByteArray block, int blok_number)
+{
+    QByteArray ba = QByteArray::fromHex(QVariant("b563224107080102030405060708091011121314151617181920212223242526272829303132").toByteArray());
+
+    QByteArray raw=QByteArray::fromHex(QVariant("0102030405060708091011121314151617181920212223242526272829303132").toByteArray());
+
+
+    QByteArray number;
+    number.clear();
+    number.append((quint8)(blok_number/0x100));
+    number.append((quint8)(blok_number%0x100));
+
+   // qDebug()<<"номер "<<number.toHex();
+    quint8 size=number.size()+block.size();
+   // qDebug()<<"размер "<<size;
+    quint8 cmd=0x41;
+
+    QByteArray res;
+    res.clear();
+    res.append(0xB5);
+    res.append(0x63);
+    res.append(size);
+    res.append(cmd);
+    res.append(number);
+    res.append(block);
+
+    quint32 crc32 = Crc32::calcCRC32(ba);
+  //  qDebug()<<ba.toHex();
+  //  qDebug()<<res.toHex();
+   // qDebug()<<"crc32 raw"<<crc32;
+    crc32 = Crc32::calcCRC32(res);
+   // qDebug()<<"crc32 res"<<crc32;
+
+    QByteArray crc32_ba;
+    crc32_ba.clear();
+    crc32_ba.append((quint8)(crc32/0x1000000));
+    crc32_ba.append((quint8)(crc32/0x10000));
+    crc32_ba.append((quint8)(crc32/0x100));
+    crc32_ba.append((quint8)(crc32%0x100));
+
+     res.append(crc32_ba);
+
+     return res;
+
+
+    qDebug()<<"crc32_ba "<<crc32_ba.toHex();
+}
+
 int MainWindow::getKvit()
 {
     int val=kvit;
@@ -153,10 +251,12 @@ void MainWindow::setKvit()
 
 void MainWindow::get_kvit_msg()
 {
-    qDebug()<<"get_kvit" ;
+
+    qDebug()<<"get_kvit; step "<<step;
     switch(step)
     {
     case 1:
+        tmr_1.stop();
         step=2;
         process();
     break;
@@ -165,15 +265,25 @@ void MainWindow::get_kvit_msg()
 
 }
 
-void MainWindow::get_kvit_msg_with_block_number()
+void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 {
     qDebug()<<"get_kvit_with_block_number" ;
     switch(step)
     {
     case 2:
 
-        step=0;
-        process();
+        if(bl_nbr==blk_nbr)
+        {
+           blk_nbr++;
+           process();
+
+        }
+        else
+        {
+            step=0;
+            process();
+        }
+
     break;
 
     }
@@ -181,7 +291,25 @@ void MainWindow::get_kvit_msg_with_block_number()
 
 void MainWindow::send_block_number(int nbr)
 {
+    qDebug()<<"blk_nbr "<<blk_nbr;
  QByteArray ba = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
+
+ QByteArray raw=QByteArray::fromHex(QVariant("0102030405060708091011121314151617181920212223242526272829303132").toByteArray());
+
+ int nmbr=1800;
+ QByteArray number;
+ number.clear();
+ number.append((quint8)(nmbr/0x100));
+ number.append((quint8)(nmbr%0x100));
+
+ QByteArray res;
+ res.clear();
+ res.append(0xB5);
+ res.append(0x63);
+
+
+
+
 
  qDebug()<<ba.toHex();
 
@@ -276,12 +404,12 @@ void MainWindow::tmr_1_timeout()//не дождался квитанцию
 
   tmr_1.stop();
   qDebug()<<"tmr1_stop";
-  /*
+
   count_1++;
   if(count_1<100)//Счетчик_1 не больше 10?
   {
       QEventLoop loop;
-      QTimer::singleShot(10000, &loop, SLOT(quit()));
+      QTimer::singleShot(2700, &loop, SLOT(quit()));
       loop.exec();
     process();//Повторить этот шаг.
 
@@ -292,9 +420,8 @@ void MainWindow::tmr_1_timeout()//не дождался квитанцию
   step=0;
   process();//Все параметры на исходную. Счетчик_1 равен нулю.
   }
-  */
-  step=0;
-  process();//Все параметры на исходную. Счетчик_1 равен нулю.
+/*  */
+
 
 
 }
@@ -427,7 +554,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                         {
                         int bl_nbr=(quint8)res.at(4)*256+(quint8)res.at(5);
                         qDebug()<<"номер блока "<<bl_nbr;
-                        get_kvit_msg_with_block_number();
+                        get_kvit_msg_with_block_number(bl_nbr);
                         }
 
                     }
@@ -454,9 +581,12 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
 
 void MainWindow::process()
 {
+    qDebug()<<"["<<step<<"]";
     switch(step)
     {
     case 0:
+        blk_nbr=1;
+        getKvit();
         count_1=0;
         count_2=0;
         tmr_1.stop();
@@ -488,7 +618,7 @@ void MainWindow::process()
     qDebug()<<"step 2";
 //Завернуть первый блок в обертку
 //(Написать функцию завернуть блок номер такой то в обертку)
-    send_block_number(1);
+    send_block_number(blk_nbr);
     tmr_2.start(300);
 //Отправить
 //Начать ждать квитанцию
