@@ -11,59 +11,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
-    qDebug()<<"blk_nbr "<<blk_nbr;
- QByteArray origin = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
- QByteArray ba = QByteArray::fromHex(QVariant("b563224107080102030405060708091011121314151617181920212223242526272829303132").toByteArray());
-
- QByteArray raw=QByteArray::fromHex(QVariant("0102030405060708091011121314151617181920212223242526272829303132").toByteArray());
-
- int nmbr=1800;
- QByteArray number;
- number.clear();
- number.append((quint8)(nmbr/0x100));
- number.append((quint8)(nmbr%0x100));
-
- qDebug()<<"номер "<<number.toHex();
- quint8 size=number.size()+raw.size();
- qDebug()<<"размер "<<size;
- quint8 cmd=0x41;
-
- QByteArray res;
- res.clear();
- res.append(0xB5);
- res.append(0x63);
- res.append(size);
- res.append(cmd);
- res.append(number);
- res.append(raw);
-
- quint32 crc32 = Crc32::calcCRC32(ba);
-
-
-
-
-
- qDebug()<<"crc32 raw"<<crc32;
- crc32 = Crc32::calcCRC32(res);
- qDebug()<<"crc32 res"<<crc32;
-
- QByteArray crc32_ba;
- crc32_ba.clear();
- crc32_ba.append((quint8)(crc32/0x1000000));
- crc32_ba.append((quint8)(crc32/0x10000));
- crc32_ba.append((quint8)(crc32/0x100));
- crc32_ba.append((quint8)(crc32%0x100));
- res.append(crc32_ba);
-
- QByteArray final=this->wrap_block(raw,nmbr);
-
- qDebug()<<origin.toHex();
- qDebug()<<res.toHex();
- qDebug()<<final.toHex();
-
-
- qDebug()<<"crc32_ba "<<crc32_ba.toHex();
-
 
 //Обнуление настроек
     quit=0;
@@ -75,13 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     for (const QSerialPortInfo &info : infos)
         ui->PortName->addItem(info.portName());
 
-//Протестили CRC32
-    QByteArray ar;
-    ar.append(0xB5);
-    ar.append(0x01);
-    ar.append(0x02);
-    crc32 = Crc32::calcCRC32(ar);
-    qDebug()<<crc32;
+
 
 //Здесь закачай файл в буффер
 /*
@@ -292,29 +233,23 @@ void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 void MainWindow::send_block_number(int nbr)
 {
     qDebug()<<"blk_nbr "<<blk_nbr;
- QByteArray ba = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
 
  QByteArray raw=QByteArray::fromHex(QVariant("0102030405060708091011121314151617181920212223242526272829303132").toByteArray());
 
- int nmbr=1800;
- QByteArray number;
- number.clear();
- number.append((quint8)(nmbr/0x100));
- number.append((quint8)(nmbr%0x100));
 
- QByteArray res;
- res.clear();
- res.append(0xB5);
- res.append(0x63);
+
+ QByteArray res=this->wrap_block(raw,nbr);
 
 
 
 
 
- qDebug()<<ba.toHex();
+
+
+// qDebug()<<res.toHex();
 
  port.readAll();
- port.write(ba);
+ port.write(res);
  port.waitForBytesWritten();
 
 
