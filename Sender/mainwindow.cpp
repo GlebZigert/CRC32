@@ -11,6 +11,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
+    QByteArray ba = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
+
+    qDebug()<<"ba "<<ba.toHex();
+
 //Обнуление настроек
     quit=0;
     step=0;
@@ -54,6 +58,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 //Сигналы
     connect(&tmr_1,SIGNAL(timeout()),this,SLOT(tmr_1_timeout()));
+    connect(&tmr_2,SIGNAL(timeout()),this,SLOT(tmr_2_timeout()));
     connect(&port, SIGNAL(readyRead()), this, SLOT(readData()));
     connect(this, SIGNAL(data_from_port(QByteArray)), this, SLOT(slot_to_data_from_port(QByteArray)));
 
@@ -162,7 +167,31 @@ void MainWindow::get_kvit_msg()
 
 void MainWindow::get_kvit_msg_with_block_number()
 {
- qDebug()<<"get_kvit_with_block_number" ;
+    qDebug()<<"get_kvit_with_block_number" ;
+    switch(step)
+    {
+    case 2:
+
+        step=0;
+        process();
+    break;
+
+    }
+}
+
+void MainWindow::send_block_number(int nbr)
+{
+ QByteArray ba = QByteArray::fromHex(QVariant("b5632241070801020304050607080910111213141516171819202122232425262728293031328b4012f8").toByteArray());
+
+ qDebug()<<ba.toHex();
+
+ port.readAll();
+ port.write(ba);
+ port.waitForBytesWritten();
+
+
+
+
 }
 
 // Get the crc32 code of the file
@@ -222,6 +251,8 @@ void MainWindow::on_PortName_currentIndexChanged(const QString &arg1)
     port.close();
     this->ui->PortState->setText("закрыт");
     ui->pushButton->setEnabled(port.isOpen());
+    step=0;
+    process();
 }
 
 void MainWindow::on_pushButton_clicked()
@@ -235,11 +266,44 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
+void MainWindow::load_file_to_buffer(QString filepath)
+{
+
+}
+
 void MainWindow::tmr_1_timeout()//не дождался квитанцию
 {
+
   tmr_1.stop();
+  qDebug()<<"tmr1_stop";
+  /*
   count_1++;
   if(count_1<100)//Счетчик_1 не больше 10?
+  {
+      QEventLoop loop;
+      QTimer::singleShot(10000, &loop, SLOT(quit()));
+      loop.exec();
+    process();//Повторить этот шаг.
+
+  }
+  else//Счетчик_1 больше 10?
+  {
+      //Вывести Нет Связи
+  step=0;
+  process();//Все параметры на исходную. Счетчик_1 равен нулю.
+  }
+  */
+  step=0;
+  process();//Все параметры на исходную. Счетчик_1 равен нулю.
+
+
+}
+
+void MainWindow::tmr_2_timeout()
+{
+  tmr_2.stop();
+  count_2++;
+  if(count_2<100)//Счетчик_1 не больше 10?
   {
     process();//Повторить этот шаг.
 
@@ -251,17 +315,20 @@ void MainWindow::tmr_1_timeout()//не дождался квитанцию
   process();//Все параметры на исходную. Счетчик_1 равен нулю.
   }
 
-
 }
 
 void MainWindow::readData()
 {
-    qDebug()<<".";
-
-
+ //   qDebug()<<".";
     QByteArray data;
     data.clear();
+
+
+ //   data.append(port.readAll());
+    while(port.waitForReadyRead(100))
     data.append(port.readAll());
+
+
     emit data_from_port(data);
     /*
     if(port.waitForReadyRead())
@@ -391,6 +458,9 @@ void MainWindow::process()
     {
     case 0:
         count_1=0;
+        count_2=0;
+        tmr_1.stop();
+        tmr_2.stop();
     break;
 
     case 1:
@@ -398,7 +468,7 @@ void MainWindow::process()
 // Отправить команду Старт
     cmd_start();
 
-    tmr_1.start(30);
+    tmr_1.start(1000);
 //Начать ждать квитанцию столько то времени
 
 //Дождался квитанцию? перейти на шаг 2
@@ -417,6 +487,9 @@ void MainWindow::process()
     case 2:
     qDebug()<<"step 2";
 //Завернуть первый блок в обертку
+//(Написать функцию завернуть блок номер такой то в обертку)
+    send_block_number(1);
+    tmr_2.start(300);
 //Отправить
 //Начать ждать квитанцию
     break;
@@ -437,10 +510,19 @@ void MainWindow::process()
 void MainWindow::cmd_start()
 {
    qDebug()<<"cmd start";
-   QByteArray ar;
-   ar.append(0xB5);
-   ar.append(0x1);
-   ar.append(0x2);
-   port.write(ar);
+
+
+   QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630040a322").toByteArray());
+ /*
+   QByteArray res;
+   res.append(0xFF);
+   res.append(0xFF);
+   res.append(0xFF);
+   res.append(0xFF);
+   res.append(0xFF);
+   res.append(ba);
+   res.append(0x22);
+*/
+   port.write(ba);
    port.waitForBytesWritten();
 }
