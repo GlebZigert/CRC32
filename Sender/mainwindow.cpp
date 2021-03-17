@@ -3,6 +3,8 @@
 #include <QDebug>
 #include <crc32.h>
 #include <QSerialPortInfo>
+#include <QFile>
+#include<QDataStream>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -25,6 +27,43 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 //Здесь закачай файл в буффер
+
+QByteArray bin;
+bin.clear();
+    QFile file("E:/rif_encr.bin");
+
+    if(file.open(QIODevice::ReadOnly))
+    {
+        qDebug()<<"file.size "<<file.size();
+        QDataStream stream(&file);    // read the data serialized from the file
+
+        for(int i=0;i<file.size();i++)
+        {
+            quint8 dt;
+            stream >> dt;
+            bin.append(dt);
+        }
+
+    }
+
+int cnt=0;
+QByteArray line;
+line.clear();
+    for(int i=0;i<bin.size();i++)
+    {
+        line.append((quint8)bin.at(i));
+        cnt++;
+        if(cnt==20)
+        {
+          qDebug()<<line.toHex();
+          line.clear();
+          cnt=0;
+
+        }
+
+    }
+    qDebug()<<"bin :"<<bin.toHex();
+
 /*
  *
  *
