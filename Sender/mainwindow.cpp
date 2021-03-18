@@ -313,6 +313,7 @@ void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
         if(bl_nbr==blk_nbr)
         {
            repeat=0;
+           this->ui->progressBar->setValue(blk_nbr);
            blk_nbr++;
           if(blk_nbr==map.size())
          //   if(blk_nbr==5)
@@ -787,7 +788,7 @@ void MainWindow::process()
 //Завернуть первый блок в обертку
 //(Написать функцию завернуть блок номер такой то в обертку)
     send_block_number(blk_nbr);
-    this->ui->progressBar->setValue(blk_nbr);
+
     tmr_2.start(300);
 //Отправить
 //Начать ждать квитанцию
@@ -795,12 +796,12 @@ void MainWindow::process()
 
     case 3:
 
-        cmd_finish();
+      //  cmd_finish();
        //  QMessageBox::critical(0,"Ошибка","Такой обьект уже существует");
+        this->ui->progressBar->setValue(this->ui->progressBar->maximum());
 
-          QMessageBox::information(0,"","Обновление прошло успешно") ;
-
-        step=4;
+        QMessageBox::information(0,"","Обновление прошло успешно") ;
+                step=4;
   //  tmr_1.start(1000);
      //   tmr_1.start(1000);
 
