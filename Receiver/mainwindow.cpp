@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
     qDebug()<<crc32;
 
     connect(&tmr_1,SIGNAL(timeout()),this,SLOT(tmr_1_timeout()));
-
+    connect(&port, SIGNAL(readyRead()), this, SLOT(readData()));
 
     //
 
@@ -253,4 +253,35 @@ void MainWindow::cmd_start()
    ar.append(0x2);
    port.write(ar);
    port.waitForBytesWritten();
+}
+
+void MainWindow::readData()
+{
+ //   //qDebug()<<".";
+    QByteArray data;
+    data.clear();
+
+
+ //   data.append(port.readAll());
+    while(port.waitForReadyRead(100))
+    data.append(port.readAll());
+
+
+    emit data_from_port(data);
+    /*
+    if(port.waitForReadyRead())
+    {
+        data.append(port.readAll());
+        if(port.waitForReadyRead(10))
+        {
+            data.append(port.readAll());
+
+
+        }
+
+            //qDebug()<<data.toHex();
+    }
+*/
+
+
 }

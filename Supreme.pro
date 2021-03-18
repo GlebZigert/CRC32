@@ -1,4 +1,5 @@
 TEMPLATE = subdirs serialport
 
 SUBDIRS += \
-    Sender
+    Sender\
+

@@ -5,6 +5,7 @@
 #include <crc_toolchain.h>
 #include <QSerialPort>
 #include <QTimer>
+#include<QMap>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -40,9 +41,10 @@ public slots:
     void tmr_2_timeout();
     void readData();
     void slot_to_data_from_port(QByteArray data);
-
+    void get_block_to_test(QByteArray);
 private:
-
+    QMap<int,QByteArray> map;
+    QMap<int,QByteArray> map_r;
 
     /*
     QByteArray data{
@@ -51,12 +53,15 @@ private:
     ,0x12 ,0xf8
     };*/
 
+    int repeat;
+
     void process();
 
     int count_1;
     int count_2;
 
     void cmd_start();
+    void cmd_finish();
 
     QTimer tmr_1;
     QTimer tmr_2;
@@ -85,6 +90,6 @@ private:
 
 signals:
     void data_from_port(QByteArray data);
-
+    void take_block(QByteArray);
 };
 #endif // MAINWINDOW_H

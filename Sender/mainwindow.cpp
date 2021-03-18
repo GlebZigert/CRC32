@@ -5,6 +5,7 @@
 #include <QSerialPortInfo>
 #include <QFile>
 #include<QDataStream>
+#include<QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -12,6 +13,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
 
     ui->setupUi(this);
+
 
 
 //Обнуление настроек
@@ -30,11 +32,13 @@ MainWindow::MainWindow(QWidget *parent)
 
 QByteArray bin;
 bin.clear();
-    QFile file("E:/rif_encr.bin");
+QString filepath= QCoreApplication::applicationDirPath() + "/rif_encr.bin";
+qDebug()<<"filepath "<<filepath;
+    QFile file(filepath);
 
     if(file.open(QIODevice::ReadOnly))
     {
-        qDebug()<<"file.size "<<file.size();
+        //qDebug()<<"file.size "<<file.size();
         QDataStream stream(&file);    // read the data serialized from the file
 
         for(int i=0;i<file.size();i++)
@@ -49,12 +53,15 @@ bin.clear();
 int cnt=0;
 QByteArray line;
 line.clear();
+int block_number=0;
     for(int i=0;i<bin.size();i++)
     {
         line.append((quint8)bin.at(i));
         cnt++;
-        if(cnt==20)
+        if((cnt==32)||(cnt==bin.size()))
         {
+          map.insert(block_number,line);
+          block_number++;
           qDebug()<<line.toHex();
           line.clear();
           cnt=0;
@@ -62,7 +69,51 @@ line.clear();
         }
 
     }
-    qDebug()<<"bin :"<<bin.toHex();
+    this->ui->progressBar->setMinimum(0);
+    this->ui->progressBar->setMaximum(map.size());
+
+ //  qDebug()<<"bin :"<<bin.toHex();
+/*   qDebug()<<"---------------------------";
+   qDebug()<<"-";
+   qDebug()<<"-";
+   qDebug()<<"-";
+   qDebug()<<"-";
+   qDebug()<<"-";
+   qDebug()<<"---------------------------";
+
+    //qDebug()<<"map size "<<map.size();
+//    //qDebug()<<map.value(1).toHex();
+//       //qDebug()<<map.value(2).toHex();
+    for(int i=0;i<map.size()+1;i++)
+    {
+        qDebug()<<"-----------------------------------------------------------------------block "<<i;
+        qDebug()<<map.value(i).toHex();
+
+    }*/
+QString testfilepath= QCoreApplication::applicationDirPath() + "/rif_encr_TEST.bin";
+
+    QFile test(testfilepath);
+
+    if(test.open(QIODevice::WriteOnly))
+    {
+
+        //qDebug()<<"file.size "<<file.size();
+        QDataStream stream(&test);    // read the data serialized from the file
+
+        for(int i=0;i<map.size()+1;i++)
+        {
+            for(int x=0;x<map.value(i).size();x++)
+            {
+
+                stream << (quint8)map.value(i).at(x);
+
+            }
+
+        }
+
+
+    }
+
 
 /*
  *
@@ -91,6 +142,7 @@ line.clear();
     connect(&tmr_2,SIGNAL(timeout()),this,SLOT(tmr_2_timeout()));
     connect(&port, SIGNAL(readyRead()), this, SLOT(readData()));
     connect(this, SIGNAL(data_from_port(QByteArray)), this, SLOT(slot_to_data_from_port(QByteArray)));
+    connect(this, SIGNAL(take_block(QByteArray)), this, SLOT(get_block_to_test(QByteArray)));
 
     //
 
@@ -101,6 +153,9 @@ line.clear();
 
 MainWindow::~MainWindow()
 {
+    step=0;
+    process();
+    port.close();
     delete ui;
 
 }
@@ -181,9 +236,9 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number)
     number.append((quint8)(blok_number/0x100));
     number.append((quint8)(blok_number%0x100));
 
-   // qDebug()<<"номер "<<number.toHex();
+   // //qDebug()<<"номер "<<number.toHex();
     quint8 size=number.size()+block.size();
-   // qDebug()<<"размер "<<size;
+   // //qDebug()<<"размер "<<size;
     quint8 cmd=0x41;
 
     QByteArray res;
@@ -196,11 +251,11 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number)
     res.append(block);
 
     quint32 crc32 = Crc32::calcCRC32(ba);
-  //  qDebug()<<ba.toHex();
-  //  qDebug()<<res.toHex();
-   // qDebug()<<"crc32 raw"<<crc32;
+  //  //qDebug()<<ba.toHex();
+  //  //qDebug()<<res.toHex();
+   // //qDebug()<<"crc32 raw"<<crc32;
     crc32 = Crc32::calcCRC32(res);
-   // qDebug()<<"crc32 res"<<crc32;
+   // //qDebug()<<"crc32 res"<<crc32;
 
     QByteArray crc32_ba;
     crc32_ba.clear();
@@ -214,8 +269,10 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number)
      return res;
 
 
-    qDebug()<<"crc32_ba "<<crc32_ba.toHex();
+     //qDebug()<<"crc32_ba "<<crc32_ba.toHex();
 }
+
+
 
 int MainWindow::getKvit()
 {
@@ -232,7 +289,7 @@ void MainWindow::setKvit()
 void MainWindow::get_kvit_msg()
 {
 
-    qDebug()<<"get_kvit; step "<<step;
+    //qDebug()<<"get_kvit; step "<<step;
     switch(step)
     {
     case 1:
@@ -247,22 +304,45 @@ void MainWindow::get_kvit_msg()
 
 void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 {
-    qDebug()<<"get_kvit_with_block_number" ;
+    tmr_2.stop();
+    //qDebug()<<"get_kvit_with_block_number" ;
     switch(step)
     {
     case 2:
 
         if(bl_nbr==blk_nbr)
         {
+           repeat=0;
            blk_nbr++;
-           process();
+          if(blk_nbr==map.size())
+         //   if(blk_nbr==5)
+           {
+            step=3;
+            for(int i=1;i<map.size()+1;i++)
+            {
+          //      qDebug()<<"-----------------------------------------------------------------------block "<<i;
+          //     qDebug()<<map.value(i).toHex();
+
+            }
+
+           }
 
         }
         else
         {
+            repeat++;
+            qDebug()<<"repeat "<<repeat;
+            if(repeat>10)
+            {
+            QMessageBox::critical(0,"Помехи со связью",
+                                  "Не принимает блок");
+
             step=0;
-            process();
+            }
+
+
         }
+        process();
 
     break;
 
@@ -271,27 +351,25 @@ void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 
 void MainWindow::send_block_number(int nbr)
 {
-    qDebug()<<"blk_nbr "<<blk_nbr;
+//    qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size();
 
- QByteArray raw=QByteArray::fromHex(QVariant("0102030405060708091011121314151617181920212223242526272829303132").toByteArray());
-
-
-
- QByteArray res=this->wrap_block(raw,nbr);
+//QByteArray raw=QByteArray::fromHex(QVariant("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1").toByteArray());
 
 
+QByteArray res=this->wrap_block(map.value(nbr),nbr);
 
-
+//if(nbr==3)
+//res=this->wrap_block(map.value(nbr),7);
 
 
 
-// qDebug()<<res.toHex();
+qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size()<<" "<<res.toHex();
 
  port.readAll();
  port.write(res);
  port.waitForBytesWritten();
 
-
+ //emit take_block(res);
 
 
 }
@@ -332,12 +410,12 @@ void MainWindow::on_OpenPort_clicked()
    if(port.open(QIODevice::ReadWrite))
    {
    this->ui->PortState->setText("открыт");
-   qDebug()<<"Порт "<<port.portName()<<" открыт";
+   //qDebug()<<"Порт "<<port.portName()<<" открыт";
    }
    else
    {
    this->ui->PortState->setText("закрыт");
-   qDebug()<<"Порт "<< port.portName()<<" закрыт";
+   //qDebug()<<"Порт "<< port.portName()<<" закрыт";
    }
 
    ui->pushButton->setEnabled(port.isOpen());
@@ -359,7 +437,7 @@ void MainWindow::on_PortName_currentIndexChanged(const QString &arg1)
 
 void MainWindow::on_pushButton_clicked()
 {
-    qDebug()<<"--Обновление прошивки-----";
+    //qDebug()<<"--Обновление прошивки-----";
 
     step=0;
     process();
@@ -375,12 +453,12 @@ void MainWindow::load_file_to_buffer(QString filepath)
 
 void MainWindow::tmr_1_timeout()//не дождался квитанцию
 {
-
+qDebug()<<"tmr1 timeout";
   tmr_1.stop();
-  qDebug()<<"tmr1_stop";
+  //qDebug()<<"tmr1_stop";
 
   count_1++;
-  if(count_1<100)//Счетчик_1 не больше 10?
+  if(count_1<3)//Счетчик_1 не больше 10?
   {
       QEventLoop loop;
       QTimer::singleShot(2700, &loop, SLOT(quit()));
@@ -391,7 +469,9 @@ void MainWindow::tmr_1_timeout()//не дождался квитанцию
   else//Счетчик_1 больше 10?
   {
       //Вывести Нет Связи
+
   step=0;
+  QMessageBox::critical(0,"Помехи со связью","Нет квитанции на старт");
   process();//Все параметры на исходную. Счетчик_1 равен нулю.
   }
 /*  */
@@ -402,9 +482,10 @@ void MainWindow::tmr_1_timeout()//не дождался квитанцию
 
 void MainWindow::tmr_2_timeout()
 {
+  qDebug()<<"tmr2 timeout";
   tmr_2.stop();
   count_2++;
-  if(count_2<100)//Счетчик_1 не больше 10?
+  if(count_2<10)//Счетчик_1 не больше 10?
   {
     process();//Повторить этот шаг.
 
@@ -413,6 +494,7 @@ void MainWindow::tmr_2_timeout()
   {
       //Вывести Нет Связи
   step=0;
+  QMessageBox::critical(0,"Помехи со связью","Нет квитанции на запись блока");
   process();//Все параметры на исходную. Счетчик_1 равен нулю.
   }
 
@@ -420,13 +502,13 @@ void MainWindow::tmr_2_timeout()
 
 void MainWindow::readData()
 {
- //   qDebug()<<".";
+ //   //qDebug()<<".";
     QByteArray data;
     data.clear();
 
 
- //   data.append(port.readAll());
-    while(port.waitForReadyRead(100))
+  //  data.append(port.readAll());
+    while(port.waitForReadyRead(20))
     data.append(port.readAll());
 
 
@@ -442,7 +524,7 @@ void MainWindow::readData()
 
         }
 
-            qDebug()<<data.toHex();
+            //qDebug()<<data.toHex();
     }
 */
 
@@ -451,8 +533,8 @@ void MainWindow::readData()
 
 void MainWindow::slot_to_data_from_port(QByteArray data)
 {
-    qDebug()<<"!";
-    qDebug()<<data.toHex();
+   // qDebug()<<"!";
+    qDebug()<<"принял: "<<data.toHex();
 //Анализ принятого сообщения
 
 
@@ -469,7 +551,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
         {
             if(0xB5==(quint8)data.at(i))
             {
-             qDebug()<<"Стартбайт";
+             //qDebug()<<"Стартбайт";
              B5=1;
              cnt=0;
              size=4;
@@ -484,7 +566,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                 if(3==cnt)
                 {
                 size=(quint8)data.at(i)+5;
-                qDebug()<<"Размер "<<size;
+                //qDebug()<<"Размер "<<size;
                 }
 
                 if(4==cnt)
@@ -492,7 +574,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                 int cmd=(quint8)data.at(i);
                 if(0x30==cmd)
                     {
-                    //    qDebug()<<"[PROFIT]";
+                    //    //qDebug()<<"[PROFIT]";
 
 
                     }
@@ -505,9 +587,9 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                 {
 
 
-                    qDebug()<<"посылка: "<<res.toHex();
+                    //qDebug()<<"посылка: "<<res.toHex();
                     crc=(quint8)data.at(i);
-                    qDebug()<<"crc "<<crc;
+                    //qDebug()<<"crc "<<crc;
                     quint8 real_crc=0;
 
                     for(int x=0;x<res.size();x++)
@@ -515,11 +597,11 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                        real_crc=real_crc+(quint8)res.at(x);
                     }
 
-                    qDebug()<<"real_crc "<<real_crc;
+                    //qDebug()<<"real_crc "<<real_crc;
                     if(crc==real_crc)
                     {
-                        qDebug()<<"[PROFIT]";
-                        qDebug()<<size;
+                        //qDebug()<<"[PROFIT]";
+                        //qDebug()<<size;
                         if(size==5)
                         {
                         get_kvit_msg();
@@ -527,7 +609,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                         else if(size==7)
                         {
                         int bl_nbr=(quint8)res.at(4)*256+(quint8)res.at(5);
-                        qDebug()<<"номер блока "<<bl_nbr;
+                        //qDebug()<<"номер блока "<<bl_nbr;
                         get_kvit_msg_with_block_number(bl_nbr);
                         }
 
@@ -553,18 +635,130 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
     }
 }
 
+void MainWindow::get_block_to_test(QByteArray data)
+{
+    qDebug()<<"----собираем-------------------------------";
+    qDebug()<<data.toHex();
+    QByteArray res;
+    quint8 crc=0;
+    int B5=0;
+    int cnt=0;
+    int size=0;
+    for(int i=0;i<data.size();i++)
+    {
+        //Определяем начало посылки
+        if(0==B5)
+        {
+            if(0xB5==(quint8)data.at(i))
+            {
+             qDebug()<<"Стартбайт";
+             B5=1;
+             cnt=0;
+             size=4;
+            }
+        }
+        else
+        {
+            if(cnt<size)
+            {
+                if(cnt>5)
+                res.append((quint8)data.at(i));
+
+                if(2==cnt)
+                {
+                qDebug()<<"(quint8)data.at(i)"<<(quint8)data.at(i);
+                size=(quint8)data.at(i)+4;
+                qDebug()<<"Размер "<<size;
+                }
+
+                if(4==cnt)
+                {
+                int cmd=(quint8)data.at(i);
+                if(0x30==cmd)
+                    {
+                        qDebug()<<"[PROFIT]";
+
+
+                    }
+
+                }
+            }
+            else
+            {
+                if(cnt==size)
+                {
+
+
+                    qDebug()<<"посылка: "<<res.toHex();
+                    map_r.insert(blk_nbr,res);
+
+                    /*
+                    crc=(quint8)data.at(i);
+                    //qDebug()<<"crc "<<crc;
+                    quint8 real_crc=0;
+
+                    for(int x=0;x<res.size();x++)
+                    {
+                       real_crc=real_crc+(quint8)res.at(x);
+                    }
+
+                    //qDebug()<<"real_crc "<<real_crc;
+                    if(crc==real_crc)
+                    {
+                        //qDebug()<<"[PROFIT]";
+                        //qDebug()<<size;
+                        if(size==5)
+                        {
+                        get_kvit_msg();
+                        }
+                        else if(size==7)
+                        {
+                        int bl_nbr=(quint8)res.at(4)*256+(quint8)res.at(5);
+                        //qDebug()<<"номер блока "<<bl_nbr;
+                        get_kvit_msg_with_block_number(bl_nbr);
+                        }
+
+                    }
+
+                      i=data.size();
+
+                    */
+                }
+
+            }
+
+
+
+
+        }
+
+
+
+
+
+        cnt++;
+
+    }
+qDebug()<<"----собираем-------------------------------";
+}
+
 void MainWindow::process()
 {
     qDebug()<<"["<<step<<"]";
     switch(step)
     {
     case 0:
-        blk_nbr=1;
+
+      //  blk_nbr=1468;
+        blk_nbr=0;
+        repeat=0;
         getKvit();
         count_1=0;
         count_2=0;
         tmr_1.stop();
         tmr_2.stop();
+        map_r.clear();
+        this->ui->progressBar->setValue(0);
     break;
 
     case 1:
@@ -589,16 +783,30 @@ void MainWindow::process()
     break;
 
     case 2:
-    qDebug()<<"step 2";
+    //qDebug()<<"step 2";
 //Завернуть первый блок в обертку
 //(Написать функцию завернуть блок номер такой то в обертку)
     send_block_number(blk_nbr);
+    this->ui->progressBar->setValue(blk_nbr);
     tmr_2.start(300);
 //Отправить
 //Начать ждать квитанцию
     break;
 
     case 3:
+
+        cmd_finish();
+       //  QMessageBox::critical(0,"Ошибка","Такой обьект уже существует");
+
+          QMessageBox::information(0,"","Обновление прошло успешно") ;
+
+        step=4;
+  //  tmr_1.start(1000);
+     //   tmr_1.start(1000);
+
+    break;
+
+    case 4:
 
     break;
 
@@ -613,7 +821,7 @@ void MainWindow::process()
 
 void MainWindow::cmd_start()
 {
-   qDebug()<<"cmd start";
+   //qDebug()<<"cmd start";
 
 
    QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630040a322").toByteArray());
@@ -629,4 +837,21 @@ void MainWindow::cmd_start()
 */
    port.write(ba);
    port.waitForBytesWritten();
+}
+
+void MainWindow::cmd_finish()
+{
+    QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630042a522").toByteArray());
+  /*
+    QByteArray res;
+    res.append(0xFF);
+    res.append(0xFF);
+    res.append(0xFF);
+    res.append(0xFF);
+    res.append(0xFF);
+    res.append(ba);
+    res.append(0x22);
+ */
+    port.write(ba);
+    port.waitForBytesWritten();
 }

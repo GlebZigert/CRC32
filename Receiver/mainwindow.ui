@@ -24,10 +24,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>ОБНОВЛЕНИЕ ПРОШИВКИ</string>
+     <string>СТАРТ</string>
     </property>
    </widget>
-   <widget class="QWidget" name="" native="true">
+   <widget class="QWidget" name="widget" native="true">
     <property name="geometry">
      <rect>
       <x>11</x>

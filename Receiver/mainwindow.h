@@ -31,7 +31,9 @@ private slots:
 public slots:
 
     void tmr_1_timeout();
-
+    void readData();
+    void slot_to_data_from_port(QByteArray);
+    void get_block_to_test(QByteArray block);
 private:
 
     void process(int step);
@@ -44,5 +46,9 @@ private:
     QSerialPort port;
     QString calcFileCRC(QString fileName);
     quint32 calcCRC32(QByteArray data);
+
+signals:
+    void data_from_port(QByteArray data);
+    void take_block(QByteArray block);
 };
 #endif // MAINWINDOW_H

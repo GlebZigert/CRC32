@@ -27,7 +27,7 @@
      <string>ОБНОВЛЕНИЕ ПРОШИВКИ</string>
     </property>
    </widget>
-   <widget class="QWidget" name="" native="true">
+   <widget class="QWidget" name="widget" native="true">
     <property name="geometry">
      <rect>
       <x>11</x>
@@ -51,6 +51,19 @@
       <widget class="QLineEdit" name="PortState"/>
      </item>
     </layout>
+   </widget>
+   <widget class="QProgressBar" name="progressBar">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>130</y>
+      <width>291</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>24</number>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
