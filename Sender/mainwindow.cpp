@@ -14,7 +14,28 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
+    d_num=0x63;
 
+   QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630040a322").toByteArray());
+
+   QByteArray my;
+   my.append(d_num);
+   my.append((quint8)0);
+   my.append(0x40);
+   my.append(get_CRC8(my));
+   my.append(0x22);
+
+   my.insert(0,0xb5);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+
+
+
+   qDebug()<<ba.toHex();
+   qDebug()<<my.toHex();
 
 //Обнуление настроек
     quit=0;
@@ -224,7 +245,17 @@ quint32 MainWindow::calcCRC32(QByteArray data)
     return (crc32 ^ 0xffffffffL);
 }
 
-QByteArray MainWindow::wrap_block(QByteArray block, int blok_number)
+quint8 MainWindow::get_CRC8(QByteArray data)
+{
+    quint8 crc=0;
+    for(int i=0;i<data.size();i++)
+    {
+        crc=crc+(quint8)data.at(i);
+    }
+    return crc;
+}
+
+QByteArray MainWindow::wrap_block(QByteArray block, int blok_number,int dev_number)
 {
     QByteArray ba = QByteArray::fromHex(QVariant("b563224107080102030405060708091011121314151617181920212223242526272829303132").toByteArray());
 
@@ -244,7 +275,7 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number)
     QByteArray res;
     res.clear();
     res.append(0xB5);
-    res.append(0x63);
+    res.append(dev_number);
     res.append(size);
     res.append(cmd);
     res.append(number);
@@ -333,7 +364,7 @@ void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
         {
             repeat++;
             qDebug()<<"repeat "<<repeat;
-            if(repeat>10)
+            if(repeat>3)
             {
             QMessageBox::critical(0,"Помехи со связью",
                                   "Не принимает блок");
@@ -350,14 +381,14 @@ void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
     }
 }
 
-void MainWindow::send_block_number(int nbr)
+void MainWindow::send_block_number(int nbr,int dev_number)
 {
 //    qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size();
 
 //QByteArray raw=QByteArray::fromHex(QVariant("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1").toByteArray());
 
 
-QByteArray res=this->wrap_block(map.value(nbr),nbr);
+QByteArray res=this->wrap_block(map.value(nbr),nbr,dev_number);
 
 //if(nbr==3)
 //res=this->wrap_block(map.value(nbr),7);
@@ -486,7 +517,7 @@ void MainWindow::tmr_2_timeout()
   qDebug()<<"tmr2 timeout";
   tmr_2.stop();
   count_2++;
-  if(count_2<10)//Счетчик_1 не больше 10?
+  if(count_2<3)//Счетчик_1 не больше 10?
   {
     process();//Повторить этот шаг.
 
@@ -787,7 +818,7 @@ void MainWindow::process()
     //qDebug()<<"step 2";
 //Завернуть первый блок в обертку
 //(Написать функцию завернуть блок номер такой то в обертку)
-    send_block_number(blk_nbr);
+    send_block_number(blk_nbr,d_num);
 
     tmr_2.start(300);
 //Отправить
@@ -825,18 +856,22 @@ void MainWindow::cmd_start()
    //qDebug()<<"cmd start";
 
 
-   QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630040a322").toByteArray());
- /*
-   QByteArray res;
-   res.append(0xFF);
-   res.append(0xFF);
-   res.append(0xFF);
-   res.append(0xFF);
-   res.append(0xFF);
-   res.append(ba);
-   res.append(0x22);
-*/
-   port.write(ba);
+ //  QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630040a322").toByteArray());
+
+   QByteArray my;
+   my.append(d_num);
+   my.append((quint8)0);
+   my.append(0x40);
+   my.append(get_CRC8(my));
+   my.append(0x22);
+
+   my.insert(0,0xb5);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   my.insert(0,0xFF);
+   port.write(my);
    port.waitForBytesWritten();
 }
 

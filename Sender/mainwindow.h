@@ -20,6 +20,8 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    quint8 d_num;
+
     int getKvit();
     void setKvit();
 
@@ -72,19 +74,21 @@ private:
     QString calcFileCRC(QString fileName);
     quint32 calcCRC32(QByteArray data);
 
+    quint8 get_CRC8(QByteArray data);
+
     int kvit;
 
     int step;
 
     int blk_nbr;
 
-    QByteArray wrap_block(QByteArray block, int number);
+    QByteArray wrap_block(QByteArray block, int block_number,int dev_number);
 
 
     void get_kvit_msg();
     void get_kvit_msg_with_block_number(int blk_nbr);
 
-    void send_block_number(int nbr);
+    void send_block_number(int nbr,int dev_number);
 
 
 
