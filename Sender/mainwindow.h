@@ -6,6 +6,8 @@
 #include <QSerialPort>
 #include <QTimer>
 #include<QMap>
+#include<QTextStream>
+#include<QList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -41,6 +43,8 @@ private slots:
 
     void on_open_bin_file_clicked();
 
+    void on_get_version_clicked();
+
 public slots:
 
     void tmr_1_timeout();
@@ -63,10 +67,13 @@ private:
 
     void process();
 
+
+
     int count_1;
     int count_2;
 
     void cmd_start();
+    void cmd_get_version();
     void cmd_finish();
 
     QTimer tmr_1;
@@ -79,6 +86,8 @@ private:
     quint32 calcCRC32(QByteArray data);
 
     quint8 get_CRC8(QByteArray data);
+
+    QTextStream* log_stream;
 
     int kvit;
 
@@ -93,6 +102,8 @@ private:
     void get_kvit_msg_with_block_number(int blk_nbr);
 
     void send_block_number(int nbr,int dev_number);
+
+    void get_version(QByteArray data);
 
 
 

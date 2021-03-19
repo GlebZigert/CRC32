@@ -7,6 +7,8 @@
 #include<QDataStream>
 #include<QMessageBox>
 #include<QFileDialog>
+#include <QTextStream>
+#include<QDateTime>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -14,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
 
     ui->setupUi(this);
+
+
 
     d_num=0x63;
 
@@ -330,6 +334,8 @@ void MainWindow::send_block_number(int nbr,int dev_number)
 {
 //    qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size();
 
+
+
 //QByteArray raw=QByteArray::fromHex(QVariant("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1").toByteArray());
 
 
@@ -346,8 +352,54 @@ qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size()<<" "<<res.toHex();
  port.write(res);
  port.waitForBytesWritten();
 
+ QString logpath= QCoreApplication::applicationDirPath() + "/log.txt";
+
+ QFile logfile(logpath);
+ if(logfile.open(QIODevice::Append))
+ {
+     QTextStream stream(&logfile);
+     QString str;
+     str.append(QDateTime::currentDateTime().toString());
+     str.append(" передан");
+     str.append(QString::number(nbr));
+     if(repeat>0)
+     {
+      str.append(" квитанция с тем же номером блока приходит в ");
+      str.append(QString::number(repeat));
+     str.append(" раз");
+     }
+
+     if(count_2>0)
+     {
+      str.append(" квитанции получено не было ");
+      str.append(QString::number(count_2));
+     str.append(" раз");
+     }
+          str.append("\n");
+     stream<<str;
+     logfile.close();
+
+            // We're going to streaming text to the file
+
+ }
+
  //emit take_block(res);
 
+
+}
+
+void MainWindow::get_version(QByteArray data)
+{
+    tmr_1.stop();
+    qDebug()<<data.toHex();
+    QByteArray crc;
+    crc.clear();
+    crc.append((quint8)data.at(4));
+    crc.append((quint8)data.at(5));
+    crc.append((quint8)data.at(6));
+    crc.append((quint8)data.at(7));
+    this->ui->version_bin->setText(crc.toHex());
+    step=0;
 
 }
 
@@ -420,11 +472,21 @@ void MainWindow::on_pushButton_clicked()
     if(map.size()==0)
     {
 
-      QMessageBox::critical(0,"","Выбери файл прошивки");
+        QString filepach=QFileDialog::getOpenFileName(this, "open file","","*.bin");
+        if(filepach!="")
+        {
+
+        this->ui->filepath->setText(filepach);
+        load_file_to_buffer(filepach);
+
+        }
+
 
 
     }
-    else
+
+
+     if(map.size()!=0)
     {
         step=0;
         process();
@@ -493,9 +555,9 @@ qDebug()<<"tmr1 timeout";
   count_1++;
   if(count_1<3)//Счетчик_1 не больше 10?
   {
-      QEventLoop loop;
-      QTimer::singleShot(2700, &loop, SLOT(quit()));
-      loop.exec();
+  //    QEventLoop loop;
+  //    QTimer::singleShot(2700, &loop, SLOT(quit()));
+  //    loop.exec();
     process();//Повторить этот шаг.
 
   }
@@ -607,7 +669,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                 int cmd=(quint8)data.at(i);
                 if(0x30==cmd)
                     {
-                    //    //qDebug()<<"[PROFIT]";
+                        //qDebug()<<"[PROFIT]";
 
 
                     }
@@ -618,37 +680,95 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
             {
                 if(cnt==size)
                 {
+quint8 real_crc;
+qDebug()<<"cmd "<<(quint8)res.at(3);
+                   switch((quint8)res.at(3))
+                   {
+
+                   case 0x30:
+                       //qDebug()<<"посылка: "<<res.toHex();
+                       crc=(quint8)data.at(i);
+                       //qDebug()<<"crc "<<crc;
+                       real_crc=0;
+
+                       if((quint8)data.at(i))
+
+                       for(int x=0;x<res.size();x++)
+                       {
+                          real_crc=real_crc+(quint8)res.at(x);
+                       }
+
+                       //qDebug()<<"real_crc "<<real_crc;
+                       if(crc==real_crc)
+                       {
 
 
-                    //qDebug()<<"посылка: "<<res.toHex();
-                    crc=(quint8)data.at(i);
-                    //qDebug()<<"crc "<<crc;
-                    quint8 real_crc=0;
+                           //qDebug()<<"[PROFIT]";
+                           //qDebug()<<size;
+                           if(size==5)
+                           {
+                           get_kvit_msg();
+                           }
 
-                    for(int x=0;x<res.size();x++)
-                    {
-                       real_crc=real_crc+(quint8)res.at(x);
+                        }
+
+                   break;
+
+                   case 0x42:
+                       crc=(quint8)data.at(i);
+                       //qDebug()<<"crc "<<crc;
+                       real_crc=0;
+
+                       if((quint8)data.at(i))
+
+                       for(int x=0;x<res.size();x++)
+                       {
+                          real_crc=real_crc+(quint8)res.at(x);
+                       }
+
+                       //qDebug()<<"real_crc "<<real_crc;
+                       if(crc==real_crc)
+                       {
+
+
+                           //qDebug()<<"[PROFIT]";
+                           //qDebug()<<size;
+
+                           if(size==7)
+                           {
+                           int bl_nbr=(quint8)res.at(4)*256+(quint8)res.at(5);
+                           //qDebug()<<"номер блока "<<bl_nbr;
+                           get_kvit_msg_with_block_number(bl_nbr);
+                           }
+                        }
+
+
+                   break;
+
+                   case 0x45:
+                       crc=(quint8)data.at(i);
+                       //qDebug()<<"crc "<<crc;
+                       real_crc=0;
+
+                       if((quint8)data.at(i))
+
+                       for(int x=0;x<res.size();x++)
+                       {
+                          real_crc=real_crc+(quint8)res.at(x);
+                       }
+
+                       //qDebug()<<"real_crc "<<real_crc;
+                       if(crc==real_crc)
+                       {
+
+                    get_version(res);
+
+                       }
+
+                   break;
                     }
 
-                    //qDebug()<<"real_crc "<<real_crc;
-                    if(crc==real_crc)
-                    {
-                        //qDebug()<<"[PROFIT]";
-                        //qDebug()<<size;
-                        if(size==5)
-                        {
-                        get_kvit_msg();
-                        }
-                        else if(size==7)
-                        {
-                        int bl_nbr=(quint8)res.at(4)*256+(quint8)res.at(5);
-                        //qDebug()<<"номер блока "<<bl_nbr;
-                        get_kvit_msg_with_block_number(bl_nbr);
-                        }
-
-                    }
-
-                      i=data.size();
+                    i=data.size();
 /**/
                 }
 
@@ -834,14 +954,15 @@ void MainWindow::process()
         this->ui->progressBar->setValue(this->ui->progressBar->maximum());
 
         QMessageBox::information(0,"","Обновление прошло успешно") ;
-                step=4;
+        step=0;
   //  tmr_1.start(1000);
      //   tmr_1.start(1000);
 
     break;
 
-    case 4:
-
+    case 10:
+    cmd_get_version();
+    tmr_1.start(1000);
     break;
 
     default:
@@ -877,6 +998,26 @@ void MainWindow::cmd_start()
    port.waitForBytesWritten();
 }
 
+void MainWindow::cmd_get_version()
+{
+   //0xb5 0x63 0x00 0x44 0xa7
+    QByteArray my;
+    my.append(0xfe);
+    my.append(d_num);
+    my.append(0x44);
+    my.append(get_CRC8(my));
+    my.append(0x22);
+
+    my.insert(0,0xb5);
+    my.insert(0,0xFF);
+    my.insert(0,0xFF);
+    my.insert(0,0xFF);
+    my.insert(0,0xFF);
+    my.insert(0,0xFF);
+    port.write(my);
+    port.waitForBytesWritten();
+}
+
 void MainWindow::cmd_finish()
 {
     QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630042a522").toByteArray());
@@ -902,12 +1043,27 @@ void MainWindow::on_dev_num_currentIndexChanged(const QString &arg1)
 
 void MainWindow::on_open_bin_file_clicked()
 {
+
     QString filepach=QFileDialog::getOpenFileName(this, "open file","","*.bin");
     if(filepach!="")
     {
+
     this->ui->filepath->setText(filepach);
     load_file_to_buffer(filepach);
 
     }
 
+}
+
+void MainWindow::on_get_version_clicked()
+{
+ //   this->ui->version_bin->clear();
+         this->ui->version_bin->setText("");
+
+    if((step==0))
+    {
+        step=10;
+        process();
+
+    }
 }
