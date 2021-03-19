@@ -6,6 +6,7 @@
 #include <QFile>
 #include<QDataStream>
 #include<QMessageBox>
+#include<QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,26 +17,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     d_num=0x63;
 
-   QByteArray ba = QByteArray::fromHex(QVariant("ffffffffffb5630040a322").toByteArray());
-
-   QByteArray my;
-   my.append(d_num);
-   my.append((quint8)0);
-   my.append(0x40);
-   my.append(get_CRC8(my));
-   my.append(0x22);
-
-   my.insert(0,0xb5);
-   my.insert(0,0xFF);
-   my.insert(0,0xFF);
-   my.insert(0,0xFF);
-   my.insert(0,0xFF);
-   my.insert(0,0xFF);
-
-
-
-   qDebug()<<ba.toHex();
-   qDebug()<<my.toHex();
+    for(int i=0;i<100;i++)
+    {
+        this->ui->dev_num->addItem(QString::number(i));
+    }
+    this->ui->dev_num->setCurrentIndex(99);
 
 //Обнуление настроек
     quit=0;
@@ -49,49 +35,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 
 
-//Здесь закачай файл в буффер
-
-QByteArray bin;
-bin.clear();
-QString filepath= QCoreApplication::applicationDirPath() + "/rif_encr.bin";
-qDebug()<<"filepath "<<filepath;
-    QFile file(filepath);
-
-    if(file.open(QIODevice::ReadOnly))
-    {
-        //qDebug()<<"file.size "<<file.size();
-        QDataStream stream(&file);    // read the data serialized from the file
-
-        for(int i=0;i<file.size();i++)
-        {
-            quint8 dt;
-            stream >> dt;
-            bin.append(dt);
-        }
-
-    }
-
-int cnt=0;
-QByteArray line;
-line.clear();
-int block_number=0;
-    for(int i=0;i<bin.size();i++)
-    {
-        line.append((quint8)bin.at(i));
-        cnt++;
-        if((cnt==32)||(cnt==bin.size()))
-        {
-          map.insert(block_number,line);
-          block_number++;
-          qDebug()<<line.toHex();
-          line.clear();
-          cnt=0;
-
-        }
-
-    }
-    this->ui->progressBar->setMinimum(0);
-    this->ui->progressBar->setMaximum(map.size());
 
  //  qDebug()<<"bin :"<<bin.toHex();
 /*   qDebug()<<"---------------------------";
@@ -111,6 +54,8 @@ int block_number=0;
         qDebug()<<map.value(i).toHex();
 
     }*/
+
+/*
 QString testfilepath= QCoreApplication::applicationDirPath() + "/rif_encr_TEST.bin";
 
     QFile test(testfilepath);
@@ -134,7 +79,7 @@ QString testfilepath= QCoreApplication::applicationDirPath() + "/rif_encr_TEST.b
 
 
     }
-
+*/
 
 /*
  *
@@ -470,16 +415,72 @@ void MainWindow::on_PortName_currentIndexChanged(const QString &arg1)
 void MainWindow::on_pushButton_clicked()
 {
     //qDebug()<<"--Обновление прошивки-----";
+    d_num=this->ui->dev_num->currentIndex();
 
-    step=0;
-    process();
-    step=1;
-    process();
+    if(map.size()==0)
+    {
+
+      QMessageBox::critical(0,"","Выбери файл прошивки");
+
+
+    }
+    else
+    {
+        step=0;
+        process();
+        step=1;
+        process();
+    }
+
+
 
 }
 
 void MainWindow::load_file_to_buffer(QString filepath)
 {
+    //Здесь закачай файл в буффер
+
+    QByteArray bin;
+    bin.clear();
+ //   QString filepath= QCoreApplication::applicationDirPath() + "/rif_encr.bin";
+    qDebug()<<"filepath "<<filepath;
+        QFile file(filepath);
+
+        if(file.open(QIODevice::ReadOnly))
+        {
+            //qDebug()<<"file.size "<<file.size();
+            QDataStream stream(&file);    // read the data serialized from the file
+
+            for(int i=0;i<file.size();i++)
+            {
+                quint8 dt;
+                stream >> dt;
+                bin.append(dt);
+            }
+
+        }
+
+    int cnt=0;
+    QByteArray line;
+    line.clear();
+    int block_number=0;
+        for(int i=0;i<bin.size();i++)
+        {
+            line.append((quint8)bin.at(i));
+            cnt++;
+            if((cnt==32)||(cnt==bin.size()))
+            {
+              map.insert(block_number,line);
+              block_number++;
+              qDebug()<<line.toHex();
+              line.clear();
+              cnt=0;
+
+            }
+
+        }
+        this->ui->progressBar->setMinimum(0);
+        this->ui->progressBar->setMaximum(map.size());
 
 }
 
@@ -791,6 +792,7 @@ void MainWindow::process()
         tmr_2.stop();
         map_r.clear();
         this->ui->progressBar->setValue(0);
+
     break;
 
     case 1:
@@ -890,4 +892,22 @@ void MainWindow::cmd_finish()
  */
     port.write(ba);
     port.waitForBytesWritten();
+}
+
+void MainWindow::on_dev_num_currentIndexChanged(const QString &arg1)
+{
+ //   d_num=this->ui->dev_num->currentIndex();
+
+}
+
+void MainWindow::on_open_bin_file_clicked()
+{
+    QString filepach=QFileDialog::getOpenFileName(this, "open file","","*.bin");
+    if(filepach!="")
+    {
+    this->ui->filepath->setText(filepach);
+    load_file_to_buffer(filepach);
+
+    }
+
 }

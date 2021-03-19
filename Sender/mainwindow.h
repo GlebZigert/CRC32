@@ -37,6 +37,10 @@ private slots:
 
 
 
+    void on_dev_num_currentIndexChanged(const QString &arg1);
+
+    void on_open_bin_file_clicked();
+
 public slots:
 
     void tmr_1_timeout();
