@@ -1002,8 +1002,8 @@ void MainWindow::cmd_get_version()
 {
    //0xb5 0x63 0x00 0x44 0xa7
     QByteArray my;
-    my.append(0xfe);
     my.append(d_num);
+    my.append((quint8)0x0);
     my.append(0x44);
     my.append(get_CRC8(my));
     my.append(0x22);
