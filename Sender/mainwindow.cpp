@@ -335,7 +335,7 @@ void MainWindow::send_block_number(int nbr,int dev_number)
 //    qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size();
 
 
-
+count_2=0;
 //QByteArray raw=QByteArray::fromHex(QVariant("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1").toByteArray());
 
 
@@ -552,23 +552,34 @@ qDebug()<<"tmr1 timeout";
   tmr_1.stop();
   //qDebug()<<"tmr1_stop";
 
-  count_1++;
-  if(count_1<3)//Счетчик_1 не больше 10?
+  if(step==10)
   {
-  //    QEventLoop loop;
-  //    QTimer::singleShot(2700, &loop, SLOT(quit()));
-  //    loop.exec();
-    process();//Повторить этот шаг.
+      count_1++;
+      if(count_1<3)//Счетчик_1 не больше 10?
+      {
+      //    QEventLoop loop;
+      //    QTimer::singleShot(2700, &loop, SLOT(quit()));
+      //    loop.exec();
+        process();//Повторить этот шаг.
+
+      }
+      else//Счетчик_1 больше 10?
+      {
+          //Вывести Нет Связи
+
+      step=0;
+      QMessageBox::critical(0,"Помехи со связью","Нет квитанции на старт");
+      process();//Все параметры на исходную. Счетчик_1 равен нулю.
+      }
 
   }
-  else//Счетчик_1 больше 10?
+  if(step==1)
   {
-      //Вывести Нет Связи
+          step=2;
+          process();
 
-  step=0;
-  QMessageBox::critical(0,"Помехи со связью","Нет квитанции на старт");
-  process();//Все параметры на исходную. Счетчик_1 равен нулю.
   }
+
 /*  */
 
 
@@ -580,7 +591,7 @@ void MainWindow::tmr_2_timeout()
   qDebug()<<"tmr2 timeout";
   tmr_2.stop();
   count_2++;
-  if(count_2<3)//Счетчик_1 не больше 10?
+  if(count_2<10)//Счетчик_1 не больше 10?
   {
     process();//Повторить этот шаг.
 
@@ -602,12 +613,13 @@ void MainWindow::readData()
     data.clear();
 
 
-  //  data.append(port.readAll());
-    while(port.waitForReadyRead(20))
+ //   data.append(port.readAll());
+    while(port.waitForReadyRead(50))
     data.append(port.readAll());
 
-
+ qDebug()<<"принял: "<<data.toHex();
     emit data_from_port(data);
+
     /*
     if(port.waitForReadyRead())
     {
