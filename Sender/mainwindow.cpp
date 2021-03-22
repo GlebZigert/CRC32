@@ -223,6 +223,8 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number,int dev_numb
 
     QByteArray res;
     res.clear();
+
+
     res.append(0xB5);
     res.append(dev_number);
     res.append(size);
@@ -245,6 +247,10 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number,int dev_numb
     crc32_ba.append((quint8)(crc32%0x100));
 
      res.append(crc32_ba);
+
+     res.insert(0,0xFF);
+     res.insert(0,0xFF);
+     res.insert(0,0xFF);
 
      return res;
 
@@ -285,6 +291,7 @@ void MainWindow::get_kvit_msg()
 void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 {
     tmr_2.stop();
+    count_2=0;
     //qDebug()<<"get_kvit_with_block_number" ;
     switch(step)
     {
@@ -335,7 +342,7 @@ void MainWindow::send_block_number(int nbr,int dev_number)
 //    qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size();
 
 
-count_2=0;
+
 //QByteArray raw=QByteArray::fromHex(QVariant("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1").toByteArray());
 
 
@@ -641,7 +648,7 @@ void MainWindow::readData()
 void MainWindow::slot_to_data_from_port(QByteArray data)
 {
    // qDebug()<<"!";
-    qDebug()<<"принял: "<<data.toHex();
+  //  qDebug()<<"принял: "<<data.toHex();
 //Анализ принятого сообщения
 
 
