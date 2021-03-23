@@ -1056,7 +1056,7 @@ void MainWindow::cmd_finish()
 
 void MainWindow::on_dev_num_currentIndexChanged(const QString &arg1)
 {
- //   d_num=this->ui->dev_num->currentIndex();
+    d_num=this->ui->dev_num->currentIndex();
 
 }
 
