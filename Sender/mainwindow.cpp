@@ -980,6 +980,7 @@ void MainWindow::process()
     break;
 
     case 10:
+
     cmd_get_version();
     tmr_1.start(1000);
     break;
@@ -1021,7 +1022,7 @@ void MainWindow::cmd_get_version()
 {
    //0xb5 0x63 0x00 0x44 0xa7
     QByteArray my;
-    my.append(d_num);
+    my.append(this->ui->dev_num->currentIndex());
     my.append((quint8)0x0);
     my.append(0x44);
     my.append(get_CRC8(my));
@@ -1056,7 +1057,7 @@ void MainWindow::cmd_finish()
 
 void MainWindow::on_dev_num_currentIndexChanged(const QString &arg1)
 {
-    d_num=this->ui->dev_num->currentIndex();
+
 
 }
 
