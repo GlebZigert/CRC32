@@ -13,6 +13,7 @@
 
 
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -111,6 +112,7 @@ private:
 
     QByteArray wrap_block(QByteArray block, int block_number,int dev_number);
 
+    int add_bin_to_bin_ini();
 
     void get_kvit_msg();
     void get_kvit_msg_with_block_number(int blk_nbr);

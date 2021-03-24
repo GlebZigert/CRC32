@@ -10,6 +10,7 @@
 #include <QTextStream>
 #include<QDateTime>
 #include <QSettings>
+#include <QInputDialog>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -289,6 +290,8 @@ QByteArray MainWindow::wrap_block(QByteArray block, int blok_number,int dev_numb
 
      //qDebug()<<"crc32_ba "<<crc32_ba.toHex();
 }
+
+
 
 
 
@@ -612,7 +615,7 @@ void MainWindow::load_file_to_buffer(QString filepath)
     }
     else
     {
-        QMessageBox::critical(0,"Ошибка","Это левая прошивка. Программа ее не знает");
+        QMessageBox::critical(0,"Ошибка","Неизвестная прошивка.");
 
     }
 
@@ -1180,6 +1183,25 @@ void MainWindow::on_get_version_clicked()
 
 void MainWindow::on_action_triggered()
 {
+bool ok;
+QString str =QInputDialog::getText(this, tr("QInputDialog::getText()"),
+                                   tr("Пароль:"), QLineEdit::Normal,
+                                   "", &ok);
+if (ok && (str=="Start7"))
+{
+ qDebug()<<str;
+add_bin_to_bin_ini();
+}
+else
+{
+
+}
+
+
+}
+
+int MainWindow::add_bin_to_bin_ini()
+{
     QString filepath=QFileDialog::getOpenFileName(this, "open file","","*.bin");
     if(filepath!="")
     {
@@ -1232,6 +1254,16 @@ void MainWindow::on_action_triggered()
           if(count>0)
           for(int i=0;i<count;i++)
           {
+              QString crc="CRC%1";
+              crc=crc.arg(i+1);
+
+
+              if(bin_crc==settings.value(crc, 0).toInt())
+              {
+                  qDebug()<<"already exists";
+                   return 0;
+              }
+
 
           }
 
@@ -1279,6 +1311,9 @@ void MainWindow::on_action_triggered()
 
 
     }
+    else
+        return 0;
 
+    return 0;
 
 }
