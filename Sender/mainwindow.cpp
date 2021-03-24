@@ -9,14 +9,46 @@
 #include<QFileDialog>
 #include <QTextStream>
 #include<QDateTime>
+#include <QSettings>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
 
-    ui->setupUi(this);
 
+
+    ui->setupUi(this);
+crc_list.clear();
+    QString filename = QCoreApplication::applicationDirPath() + "/crc";
+    QSettings settings(filename, QSettings::IniFormat);
+  #if (defined (_WIN32) || defined (_WIN64))
+      settings.setIniCodec( "Windows-1251" );
+  #else
+      settings.setIniCodec( "UTF-8" );
+  #endif
+
+    settings.beginGroup("CRC");
+
+    int count=settings.value("count",0).toInt();
+
+    if(count>0)
+    for(int i=0;i<count;i++)
+    {
+        QString crc="crc%1";
+        crc=crc.arg(i+1);
+
+    int val=settings.value(crc,0).toInt();
+    crc_list.append(val);
+    }
+    for(int i=0;i<crc_list.size();i++)
+        qDebug()<<"crc_"<<i<<" = "<<crc_list.at(i);
+
+
+
+
+    settings.endGroup();
+//--------------------------
 data.clear();
 
     d_num=0x63;
@@ -533,6 +565,29 @@ void MainWindow::load_file_to_buffer(QString filepath)
 
         }
 
+    int bin_crc=this->calcCRC32(bin);
+
+
+   int res=0;
+    for(int i=0;i<crc_list.size();i++)
+    {
+    if(bin_crc==crc_list.at(i))
+        res=1;
+    }
+
+
+
+    if(res==1)
+    {
+     QByteArray crc32_ba;
+     crc32_ba.clear();
+     crc32_ba.append((quint8)(bin_crc/0x1000000));
+     crc32_ba.append((quint8)(bin_crc/0x10000));
+     crc32_ba.append((quint8)(bin_crc/0x100));
+     crc32_ba.append((quint8)(bin_crc%0x100));
+
+     qDebug()<<"CRC "<<bin_crc<<" "<<crc32_ba.toHex();
+
     int cnt=0;
     QByteArray line;
     line.clear();
@@ -545,7 +600,7 @@ void MainWindow::load_file_to_buffer(QString filepath)
             {
               map.insert(block_number,line);
               block_number++;
-              qDebug()<<line.toHex();
+           //   qDebug()<<line.toHex();
               line.clear();
               cnt=0;
 
@@ -554,6 +609,12 @@ void MainWindow::load_file_to_buffer(QString filepath)
         }
         this->ui->progressBar->setMinimum(0);
         this->ui->progressBar->setMaximum(map.size());
+    }
+    else
+    {
+        QMessageBox::critical(0,"Ошибка","Это левая прошивка. Программа ее не знает");
+
+    }
 
 }
 
@@ -1115,9 +1176,109 @@ void MainWindow::on_get_version_clicked()
     }
 }
 
+
+
 void MainWindow::on_action_triggered()
 {
-    qDebug()<<"[PROFIT]";
-   this->settings.show();
+    QString filepath=QFileDialog::getOpenFileName(this, "open file","","*.bin");
+    if(filepath!="")
+    {
+       qDebug()<<"PROFIT";
+
+       QByteArray bin;
+       bin.clear();
+    //   QString filepath= QCoreApplication::applicationDirPath() + "/rif_encr.bin";
+       qDebug()<<"filepath "<<filepath;
+           QFile file(filepath);
+
+           if(file.open(QIODevice::ReadOnly))
+           {
+               //qDebug()<<"file.size "<<file.size();
+               QDataStream stream(&file);    // read the data serialized from the file
+
+               for(int i=0;i<file.size();i++)
+               {
+                   quint8 dt;
+                   stream >> dt;
+                   bin.append(dt);
+               }
+
+           }
+
+       int bin_crc=this->calcCRC32(bin);
+
+
+        QByteArray crc32_ba;
+        crc32_ba.clear();
+        crc32_ba.append((quint8)(bin_crc/0x1000000));
+        crc32_ba.append((quint8)(bin_crc/0x10000));
+        crc32_ba.append((quint8)(bin_crc/0x100));
+        crc32_ba.append((quint8)(bin_crc%0x100));
+
+        qDebug()<<"CRC "<<bin_crc<<" "<<crc32_ba.toHex();
+
+        QString filename = QCoreApplication::applicationDirPath() + "/crc";
+        QSettings settings(filename, QSettings::IniFormat);
+        #if (defined (_WIN32) || defined (_WIN64))
+            settings.setIniCodec( "Windows-1251" );
+        #else
+            settings.setIniCodec( "UTF-8" );
+        #endif
+
+          settings.beginGroup("CRC");
+
+          int count=settings.value("count",0).toInt();
+
+          if(count>0)
+          for(int i=0;i<count;i++)
+          {
+
+          }
+
+            count++;
+          settings.setValue("count", count);
+          QString crc="CRC%1";
+          crc=crc.arg(count);
+          settings.setValue(crc, bin_crc);
+
+
+
+
+
+
+          settings.endGroup();
+
+          crc_list.clear();
+
+            #if (defined (_WIN32) || defined (_WIN64))
+                settings.setIniCodec( "Windows-1251" );
+            #else
+                settings.setIniCodec( "UTF-8" );
+            #endif
+
+              settings.beginGroup("CRC");
+
+              count=settings.value("count",0).toInt();
+
+              if(count>0)
+              for(int i=0;i<count;i++)
+              {
+                  QString crc="crc%1";
+                  crc=crc.arg(i+1);
+
+              int val=settings.value(crc,0).toInt();
+              crc_list.append(val);
+              }
+              for(int i=0;i<crc_list.size();i++)
+                  qDebug()<<"crc_"<<i<<" = "<<crc_list.at(i);
+
+
+
+
+              settings.endGroup();
+
+
+    }
+
 
 }

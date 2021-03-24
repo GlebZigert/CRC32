@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>325</width>
-    <height>385</height>
+    <height>400</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -332,7 +332,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action">
    <property name="text">
-    <string>Изменить</string>
+    <string>Добавить прошивку</string>
    </property>
   </action>
  </widget>

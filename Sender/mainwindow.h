@@ -10,7 +10,7 @@
 #include<QTextStream>
 #include<QList>
 
-#include <settings_form.h>
+
 
 
 QT_BEGIN_NAMESPACE
@@ -24,7 +24,7 @@ class MainWindow : public QMainWindow
 public:
 
 
-    Settings_Form  settings;
+
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -50,6 +50,8 @@ private slots:
     void on_open_bin_file_clicked();
 
     void on_get_version_clicked();
+
+
 
     void on_action_triggered();
 
@@ -98,6 +100,8 @@ private:
     quint8 get_CRC8(QByteArray data);
 
     QTextStream* log_stream;
+
+    QList<int> crc_list;
 
     int kvit;
 
