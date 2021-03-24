@@ -17,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->setupUi(this);
 
-
+data.clear();
 
     d_num=0x63;
 
@@ -290,6 +290,7 @@ void MainWindow::get_kvit_msg()
 
 void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 {
+
     tmr_2.stop();
     count_2=0;
     //qDebug()<<"get_kvit_with_block_number" ;
@@ -340,10 +341,13 @@ void MainWindow::get_kvit_msg_with_block_number(int bl_nbr)
 void MainWindow::send_block_number(int nbr,int dev_number)
 {
 //    qDebug()<<"передаю "<<blk_nbr<<" из "<<map.size();
-
+    QEventLoop loop;
+    QTimer::singleShot(40, &loop, SLOT(quit()));
+    loop.exec();
 
 
 //QByteArray raw=QByteArray::fromHex(QVariant("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF1").toByteArray());
+
 
 
 QByteArray res=this->wrap_block(map.value(nbr),nbr,dev_number);
@@ -620,11 +624,13 @@ void MainWindow::readData()
     data.clear();
 
 
- //   data.append(port.readAll());
-    while(port.waitForReadyRead(50))
+//    data.append(port.readAll());
+  //  while(port.waitForReadyRead(25))
     data.append(port.readAll());
 
- qDebug()<<"принял: "<<data.toHex();
+// qDebug()<<"принял: "<<data.toHex();
+
+
     emit data_from_port(data);
 
     /*
@@ -645,8 +651,29 @@ void MainWindow::readData()
 
 }
 
-void MainWindow::slot_to_data_from_port(QByteArray data)
+void MainWindow::slot_to_data_from_port(QByteArray dt)
 {
+
+    for(int i=0;i<dt.size();i++)
+    {
+        if((quint8)dt.at(i)==0xb5)
+        {
+        if(data.size()>10)
+        {
+
+         data.clear();
+        }
+
+      //      if(data.size()>10)
+
+        }
+
+
+        data.append((quint8)dt.at(i));
+
+    }
+
+
    // qDebug()<<"!";
   //  qDebug()<<"принял: "<<data.toHex();
 //Анализ принятого сообщения
@@ -700,7 +727,7 @@ void MainWindow::slot_to_data_from_port(QByteArray data)
                 if(cnt==size)
                 {
 quint8 real_crc;
-qDebug()<<"cmd "<<(quint8)res.at(3);
+//qDebug()<<"cmd "<<(quint8)res.at(3);
                    switch((quint8)res.at(3))
                    {
 
@@ -788,7 +815,7 @@ qDebug()<<"cmd "<<(quint8)res.at(3);
                     }
 
                     i=data.size();
-/**/
+/**/                data.clear();
                 }
 
             }
@@ -916,7 +943,7 @@ qDebug()<<"----собираем-------------------------------";
 
 void MainWindow::process()
 {
-    qDebug()<<"["<<step<<"]";
+ //   qDebug()<<"["<<step<<"]";
     switch(step)
     {
     case 0:
@@ -1080,10 +1107,17 @@ void MainWindow::on_get_version_clicked()
  //   this->ui->version_bin->clear();
          this->ui->version_bin->setText("");
 
-    if((step==0))
+    if(step==0)
     {
         step=10;
         process();
 
     }
+}
+
+void MainWindow::on_action_triggered()
+{
+    qDebug()<<"[PROFIT]";
+   this->settings.show();
+
 }

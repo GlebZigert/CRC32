@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+
 #include <QMainWindow>
 #include <crc_toolchain.h>
 #include <QSerialPort>
@@ -8,6 +9,9 @@
 #include<QMap>
 #include<QTextStream>
 #include<QList>
+
+#include <settings_form.h>
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -19,6 +23,8 @@ class MainWindow : public QMainWindow
 
 public:
 
+
+    Settings_Form  settings;
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -45,6 +51,8 @@ private slots:
 
     void on_get_version_clicked();
 
+    void on_action_triggered();
+
 public slots:
 
     void tmr_1_timeout();
@@ -55,6 +63,8 @@ public slots:
 private:
     QMap<int,QByteArray> map;
     QMap<int,QByteArray> map_r;
+
+    QByteArray data;
 
     /*
     QByteArray data{
@@ -78,7 +88,7 @@ private:
 
     QTimer tmr_1;
     QTimer tmr_2;
-
+    QTimer tmr_on_rcv;
     Ui::MainWindow *ui;
     bool quit;
     QSerialPort port;
