@@ -522,8 +522,12 @@ void MainWindow::on_pushButton_clicked()
         if(filepach!="")
         {
 
-        this->ui->filepath->setText(filepach);
+
         load_file_to_buffer(filepach);
+        if(map.size()>0)
+            {
+            this->ui->filepath->setText(filepach);
+            }
 
         }
 
@@ -546,6 +550,7 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::load_file_to_buffer(QString filepath)
 {
+    map.clear();
     //Здесь закачай файл в буффер
 
     QByteArray bin;
@@ -666,7 +671,7 @@ void MainWindow::tmr_2_timeout()
   qDebug()<<"tmr2 timeout";
   tmr_2.stop();
   count_2++;
-  if(count_2<10)//Счетчик_1 не больше 10?
+  if(count_2<20)//Счетчик_1 не больше 10?
   {
     process();//Повторить этот шаг.
 
@@ -692,7 +697,7 @@ void MainWindow::readData()
   //  while(port.waitForReadyRead(25))
     data.append(port.readAll());
 
-// qDebug()<<"принял: "<<data.toHex();
+ qDebug()<<"принял: "<<data.toHex();
 
 
     emit data_from_port(data);
@@ -1158,10 +1163,14 @@ void MainWindow::on_open_bin_file_clicked()
     QString filepach=QFileDialog::getOpenFileName(this, "open file","","*.bin");
     if(filepach!="")
     {
+    this->ui->filepath->setText("");
 
-    this->ui->filepath->setText(filepach);
     load_file_to_buffer(filepach);
 
+    if(map.size()>0)
+        {
+        this->ui->filepath->setText(filepach);
+        }
     }
 
 }
